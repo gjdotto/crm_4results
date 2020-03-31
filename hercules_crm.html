@@ -1,0 +1,518 @@
+<html><head>
+        <title></title>
+        <meta charset="utf-8">
+
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/css/bootstrap.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.10.20/css/dataTables.bootstrap4.min.css">
+
+        <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+        <script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
+
+        <!-- FontAwesome -->
+        <script src="https://use.fontawesome.com/243239556e.js"></script>
+
+        <!-- Referência para a função Xrm.Navigation.openWebResource funcionar -->
+        <script type="text/javascript" src="ClientGlobalContext.js.aspx"></script>
+
+        <script type="text/javascript">
+
+            // Em alguns casos, em um web resource aberto pelo Dynamics, o backspace para de funcionar em elementos html input que não são do tipo texto.
+            // Na tabela de produtos existe um input type number, que infelizmente apresentou esse bug.
+            // Para resolver, poderia colocar o type=text, mas daí teria que fazer a validação via javascript
+            // A condição abaixo permite que o backspace funcione normalmente, de modo que a validação para números inteiros é feita pelo próprio HTML.
+            if (window.Sys && window.Sys.UI && window.Sys.UI.DomEvent && window.Sys.UI.DomEvent.prototype) {
+                window.Sys.UI.DomEvent.prototype.preventDefault = function () { };
+                window.Sys.UI.DomEvent.prototype.stopPropagation = function () { };
+            }
+    
+            function BuscaDadosOportunidade() {
+                // queryString recebe o parâmetro via método GET (tudo na url após o '?')
+                const queryString = window.location.search;
+                // Exemplo de valor da queryString:
+                // Data=F556532E-3B86-E911-A957-000D3AC03497|7c27980029-3DF5-405F-ADA9-130B3C4BE06A|7cDC390750-7552-E911-A954-000D3AC03367
+    
+    
+                // data recebe todos os valores em queryString após 'Data='
+                const urlParams = new URLSearchParams(queryString);
+                const data = urlParams.get('Data');
+                // Exemplo de valor de data:
+                // F556532E-3B86-E911-A957-000D3AC03497|7c27980029-3DF5-405F-ADA9-130B3C4BE06A|7cDC390750-7552-E911-A954-000D3AC03367
+    
+                // Os valores em data são, respectivamente e separados por '|': id da oportunidade, id do usuário da oportunidade, id da lista de preços
+                // Abaixo é feita a divisão dos ids em um array, e em seguida os valores são atribuidos a variáveis com nomes apropriados.
+                var array = data.split("|");
+    
+                return array;
+            }
+    
+            let array = BuscaDadosOportunidade();
+    
+            let opportunityId = array[0];
+            let ownerId = array[1];
+            let listaPrecosId = array[2];
+    
+            function BuscaProdutosDoRepresentante() {
+
+                debugger;
+                // Busca por todos os produtos na tabela produto do representante em que usuário == ownerId
+                let returnObject;
+                try {
+                    var fetchXml = "<fetch mapping='logical' version='1.0' >" +
+                                        "<entity name='pricelevel' >" +
+                                            "<filter>" +
+                                            "<condition attribute='pricelevelid' operator='eq' value='" + listaPrecosId + "' />" +
+                                            "</filter>" +
+                                            "<link-entity name='productpricelevel' from='pricelevelid' to='pricelevelid' link-type='inner' >" +
+                                            "<attribute name='amount' />" +
+                                            "<attribute name='productid' />" +
+                                            "<link-entity name='results_produtodorepresentante' from='results_produtorelacionadoid' to='productid' link-type='inner' >" +
+                                                "<filter>" +
+                                                "<condition attribute='results_representanteid' operator='eq' value='" + ownerId + "' />" +
+                                                "</filter>" +
+                                            "</link-entity>" +
+                                            "<link-entity name='product' from='productid' to='productid' link-type='inner' >" +
+                                                "<attribute name='productnumber' />" +
+                                                "<link-entity name='results_familiadoproduto' from='results_familiadoprodutoid' to='results_famliadoprodutoid' link-type='inner' >" +
+                                                "<attribute name='results_name' />" +
+                                                "</link-entity>" +
+                                            "</link-entity>" +
+                                            "</link-entity>" +
+                                        "</entity>" +
+                                        "</fetch>";
+
+                                    /*"<fetch mapping='logical' version='1.0' >" +
+                                        "<entity name='pricelevel' >" +
+                                            "<filter>" +
+                                                "<condition attribute='pricelevelid' operator='eq' value='" + listaPrecosId + "' />" +
+                                            "</filter>" +
+                                        "<link-entity name='productpricelevel' from='pricelevelid' to='pricelevelid' link-type='inner' >" +
+                                            "<attribute name='amount' />" +
+                                            "<attribute name='productid' />" +
+                                            "<link-entity name='results_produtodorepresentante' from='results_produtorelacionadoid' to='productid' link-type='inner' >" +
+                                            "<filter>" +
+                                                "<condition attribute='results_representanteid' operator='eq' value='" + ownerId + "' />" +
+                                            "</filter>" +
+                                            "</link-entity>" +
+                                            "<link-entity name='product' from='productid' to='productid' link-type='inner' >" +
+                                            "<attribute name='productnumber' />" +
+                                                "<link-entity name='results_familiadoproduto' from='results_familiadoprodutoid' to='results_familiadoprodutoid' link-type='inner' />" +
+                                                "<attribute name='results_name' />" +
+                                                "</link-entity>" +
+                                            "</link-entity>" +
+                                        "</link-entity>" +
+                                        "</entity>" +
+                                    "</fetch>";*/
+    
+                    var encodedFetchXml = encodeURI(fetchXml);
+    
+                    var entidade = "pricelevels";
+    
+                    var url = Xrm.Page.context.getClientUrl() + "/api/data/v9.0/" + entidade + "?fetchXml=" + encodedFetchXml;
+    
+                    var req = new XMLHttpRequest();
+                    req.open("GET", url, false);
+                    req.setRequestHeader("OData-MaxVersion", "4.0");
+                    req.setRequestHeader("OData-Version", "4.0");
+                    req.setRequestHeader("Accept", "application/json");
+                    req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+                    req.setRequestHeader("Prefer", "odata.include-annotations=\"*\"");
+                    req.onreadystatechange = function () {
+                        if (this.readyState === 4) {
+                            req.onreadystatechange = null;
+                            if (this.status === 200) {
+                                returnObject = JSON.parse(this.response);
+                            } else {
+                                console.error("RetrieveMultiple error: " + this.statusText);
+                            }
+                        }
+                    };
+    
+                    req.send();
+                }
+                catch(ex) {
+                    AlertaErro(ex);
+                }
+                finally {
+                    return returnObject;
+                }
+            }
+
+            var produtos_representante = BuscaProdutosDoRepresentante();
+    
+            function CriaMatriz() {
+                /*
+                Cria uma matriz (array composto por arrays) no seguinte formato:
+                array_produtos[i][i, id_produto, nome_produto, valor_unitario, quantidade, valor_total]
+    
+                Cada vez que:
+                - Produto é adicionado na tabela, sua quantidade é alterada de 0 para 1 e o valor total é atualizado.
+                - Produto é removido da tabela, sua quantidade é alterada de x para 0 e o valor total é atualizado.
+                - Há uma alteração na quantidade de um produto na tabela, a função AtualizaQuantidade é chamada, e sua quantidade e valor total são atualizados.
+                */
+
+                debugger;
+    
+                var array_produtos = [];
+    
+                for (var i = 0; i < produtos_representante.value.length; i++) {
+                    try {
+                        p_id = produtos_representante.value[i]["productpricelevel1.productid"];
+                        p_nome = produtos_representante.value[i]["productpricelevel1.productid@OData.Community.Display.V1.FormattedValue"];
+                        p_valor = produtos_representante.value[i]["productpricelevel1.amount"];
+                        p_idnumb = produtos_representante.value[i]["product3.productnumber"];
+                        p_familia = produtos_representante.value[i]["results_familiadoproduto4.results_name"]
+    
+                        // Adiciona os produtos na matriz
+                        array_produtos.push([i, p_id, p_nome, p_valor, 0, 0, false, p_idnumb, p_familia]);
+
+
+    
+                    }
+                    catch (ex) {
+                        AlertaErro(ex);
+                    }
+                }
+                return array_produtos;
+            }
+    
+            var array_produtos = CriaMatriz();
+    
+            function AlimentaTabela() {   
+                debugger;
+                // Função responsável por percorrer os produtos na matriz e os adicionar no dropdown (Selecione o Produto)
+                var options = '';
+                try {
+                    for (var i = 0; i < produtos_representante.value.length; i++) {
+    
+                        array_produtos[i][3] = FormataValorReal(array_produtos[i][3]); // Deixa o número com duas casas decimais
+                        array_produtos[i][4] = 1; // Quantidade = 1
+                        array_produtos[i][5] = FormataValorReal(array_produtos[i][3] * array_produtos[i][4]); // Atualiza valor total
+
+
+                        let newrow = '<tr id="' + i + '">' +
+                                        '<td class="center-check">' + '<label for="make-bed-6">' + '<input id="make-bed-6 '+ array_produtos[i][1] +'" type="checkbox" value="make-bed-6" name="make-bed-6" onclick="AtualizaCheckBox(this, ' + i + ')">' + '</label>' + '</td>' +
+                                        '<td class="center-line">' + array_produtos[i][7] + '</td>' +
+                                        '<td>' + array_produtos[i][2] + '</td>' +
+                                        '<td class="center-line">R$ ' + '<input onchange = "alterValue(this, ' + i + ')" type = "text" value = "' + array_produtos[i][3] + '" /></td>' +
+                                        '<td class="center-line">' + '<input id="qtd' + i + '" type="number" min="1" step="1" value="' + array_produtos[i][4] + '" onchange="AtualizaQuantidade(this,' + i + ')" >' + '</td>' +
+                                        '<td class="center-line">' + '<input id="valor_total' + i + '" value="' + 'R$ ' + array_produtos[i][5] + '" readonly class="plaintext">' + '</td>' +
+                                    '</tr>';
+    
+    
+    
+                        document.getElementById('tbody_produtos').insertAdjacentHTML('beforeend', newrow);
+    
+                    }
+                
+    
+                    //document.getElementById('produtos').insertAdjacentHTML('afterbegin', options);
+                }
+                catch (ex) {
+                    AlertaErro(ex);
+                }
+            }
+    
+            function AtualizaCheckBox(e, i) {
+     
+                array_produtos[i][6] = e.checked;
+            }
+    
+
+            function alterValue(e, i) {
+    
+                // Atualiza Matriz
+                array_produtos[i][3] = e.value;
+                console.log(e.value);
+
+                array_produtos[i][5] =  array_produtos[i][3] *  array_produtos[i][4];
+        
+                // Atualiza Html
+                try {
+                    let elementid = 'valor_total' + i;
+                    let inputelement = document.getElementById(elementid);
+                    let valortotal = FormataValorReal(array_produtos[i][5]);
+                    inputelement.value = 'R$ ' + valortotal;
+                }
+                catch (ex) {
+                    AlertaErro(ex);
+                }
+            }
+
+            function AtualizaQuantidade(e, i) {
+                // Função chamada sempre que há alteração no input quantidade
+    
+                // Atualiza Matriz
+                array_produtos[i][4] = e.value;
+    
+                // Atualiza Valor Total
+                array_produtos[i][5] = array_produtos[i][3] * array_produtos[i][4];
+    
+                // Atualiza Html
+                try {
+                    let elementid = 'valor_total' + i;
+                    let inputelement = document.getElementById(elementid);
+                    let valortotal = FormataValorReal(array_produtos[i][5]);
+                    inputelement.value = 'R$ ' + valortotal;
+                }
+                catch (ex) {
+                    AlertaErro(ex);
+                }
+            }
+    
+            function SalvarProdutos(array_produtos) {
+                // Função responsável por salvar os produtos, selecionados na tabela, na oportunidade
+                try {
+                    for (var cont = 0; cont < array_produtos.length; cont++) {
+     
+                        if(!array_produtos[cont][6])
+                            continue;
+                        // Laço que percorre por matriz (todos os produtos) e ignora os que não estão na tabela
+                        if (array_produtos[cont][5] == 0) {
+                            // Se valor total do produto (cont) == 0; não salva
+                            continue;
+                        }
+    
+                        var entity = {};
+                        entity["opportunityid@odata.bind"] = "/opportunities(" + opportunityId + ")";
+                        entity["productid@odata.bind"] = "/products(" + array_produtos[cont][1] + ")";
+                        entity["uomid@odata.bind"] = "/uoms(62207270-E062-43F3-80F5-81AFFAB1C746)"; // ID da Unidade Padrão. Deve ser atualizado antes de subir pra prod.
+                        entity["quantity"] = parseFloat(array_produtos[cont][4]);
+                        entity["ispriceoverridden"] = true;
+                        entity["priceperunit"] = parseFloat(array_produtos[cont][3]);
+    
+    
+                        var req = new XMLHttpRequest();
+                        req.open("POST", Xrm.Page.context.getClientUrl() + "/api/data/v9.1/opportunityproducts", false);
+                        req.setRequestHeader("OData-MaxVersion", "4.0");
+                        req.setRequestHeader("OData-Version", "4.0");
+                        req.setRequestHeader("Accept", "application/json");
+                        req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+                        req.setRequestHeader("Prefer", "odata.include-annotations=\"*\"");
+                        req.onreadystatechange = function () {
+                            if (this.readyState === 4) {
+                                req.onreadystatechange = null;
+                                if (this.status === 204) {
+                                    var uri = this.getResponseHeader("OData-EntityId");
+                                    var regExp = /\(([^)]+)\)/;
+                                    var matches = regExp.exec(uri);
+                                    var newEntityId = matches[1];
+                                } else {
+                                    Xrm.Utility.alertDialog(this.statusText);
+                                }
+                            }
+                        };
+                        console.log(JSON.stringify(entity));
+                        req.send(JSON.stringify(entity));
+                    }
+    
+                    RefreshProducts();
+    
+                    alert('Produtos incluídos com sucesso.');
+                    self.close();
+                }
+                catch (ex) {
+                    AlertaErro(ex);
+                }
+            }
+    
+            function AlertaErro(ex) {
+                alert('Ops! Algo deu errado. Tente novamente. Caso o erro persista, entre em contato com a 4Results. Erro: ' + ex);
+            }
+    
+            function FormataValorReal(p_valor) {
+                // deixar com duas casas decimais
+    
+                let valor = parseFloat(p_valor).toFixed(2);
+                return valor;
+            }
+    
+            function RefreshProducts() {
+                Xrm.Utility.openEntityForm("opportunity", opportunityId);
+            }
+
+            setTimeout(function(){
+                $(document).ready(function() {
+                    $('#example').DataTable({
+
+                        "language": {                        
+                            "sEmptyTable": "Nenhum registro encontrado",
+                            "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+                            "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+                            "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+                            "sInfoPostFix": "",
+                            "sInfoThousands": ".",
+                            "sLengthMenu": "_MENU_ resultados por página",
+                            "sLoadingRecords": "Carregando...",
+                            "sProcessing": "Processando...",
+                            "sZeroRecords": "Nenhum registro encontrado",
+                            "sSearch": "Pesquisar",
+                            "oPaginate": {
+                                "sNext": "Próximo",
+                                "sPrevious": "Anterior",
+                                "sFirst": "Primeiro",
+                                "sLast": "Último"
+                            }
+                        },
+
+                        "columnDefs": [ {
+                            "orderable": false,
+                            "targets": [0, 4, 5]
+                        }],
+
+                        "order": [[2, "desc"]]
+                    });
+                } );
+            }, 500);
+        </script>
+    
+    
+        <style>
+            body {
+                width: 100%;
+                height: 100%;
+                margin: 1% 2% 2% 2%;
+                background-color: white;
+                text-align: center;
+            }
+    
+            .content {
+                /*
+                border: solid;
+                border-color: black;
+                border-width: 2px;
+                */
+                width: 90%;
+                height: 90%;
+                margin: 1px 1px 1px 1px;
+                padding: 1px 1px 1px 1px;
+            }
+    
+            .left {
+                width: 90%;
+                float: left;
+                padding: 0 10px 0 0;
+            }
+    
+            .right {
+                width: 10%;
+                float: right;
+                text-align: right;
+            }
+    
+            .top {
+                margin-bottom: 80px;
+            }
+    
+            .bottom {
+                text-align: center;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+    
+            .center-line {
+                text-align: center;
+            }
+    
+            .center-check {
+                display:flex;
+                align-items:center
+            }
+    
+            th, td {
+                white-space: nowrap;
+            }
+    
+            input {
+                text-align: center;
+            }
+    
+            .plaintext {
+                border-color: transparent;
+                background-color: transparent;
+            }
+    
+            /* Botão de remover produto na linha da tabela */
+            #remove-btn {
+                display: none;
+            }
+    
+            tr:hover #remove-btn {
+                display: inline-block;
+            }
+    
+            .remove-btn-area:hover #remove-btn {
+                color: #DC3545;
+            }
+
+            .example {
+                display: flex;
+            }
+
+            .wrap {
+                width:90%;
+                background:rgb(243, 243, 243);
+                padding:3px;
+                overflow:hidden;
+            }
+    
+            /* CHECKBOX STYLE */
+    
+    
+            /***********************************************/
+    
+            /* Design Responsívo */
+    
+            @media only screen and (max-width: 768px) {
+                .left {
+                    width: 100%;
+                    float: none;
+                    padding: 0 0 0 0;
+                    margin-bottom: 2%;
+                }
+    
+                .right {
+                    width: 100%;
+                    float: none;
+                    text-align: center;
+                }
+    
+                #adicionar {
+                    width: 100%;
+                }
+            }
+        </style>
+    
+    <meta></head>
+    <body onload="AlimentaTabela()" style="overflow-wrap: break-word;" onfocusout="parent.setEmailRange();">
+        
+
+        <div class="wrap">
+                    <table id="example" style="width:100%" class="table table-striped table-bordered">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th name="select_all" scope="col" style="width: 30px;"><br></th>
+                                <th name="codprod" scope="col" style="width: 14%; text-align: center;">ID Produto</th>
+                                <th name="nomeprod" scope="col" style="width: 45%">Nome do Produto</th>
+                                <th name="vlruni" scope="col" style="width: 13%; text-align: center;">Valor Unitário</th>
+                                <th name="qtde" scope="col" style="width: 10%; text-align: center;">Quantidade</th>
+                                <th name="vlrtot" scope="col" style="width: 13%; text-align: center;">Valor Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody_produtos" style="font-size: 15px; vertical-align: middle;">
+                            <!-- Alimentado via Javascript pela função AlimentaTabela() -->
+                        </tbody>
+                    </table>
+
+                <div class="bottom">
+                    <button type="button" style="font-size: 22px; width: 100px; height: 45px; padding-right: 10px;" class="btn btn-outline-secondary btn-sm" onclick="self.close()">Voltar</button>
+                    <button type="button" style="font-size: 22px; width: 100px; height: 45px; padding-right: 10px; border-color: black; border-width: 1px;" class="btn btn-success btn-sm" onclick="this.disabled = true; this.value = 'Salvando...'; SalvarProdutos(array_produtos)">Salvar</button>
+                </div>
+        </div>
+
+        <!-- Bottom (botões Voltar e Salvar) -->
+
+        <!-- / Bottom -->
+    
+</body></html>
